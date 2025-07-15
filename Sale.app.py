@@ -2,9 +2,9 @@ import streamlit as st
 import pandas as pd
 
 # --- CONFIGURATION ----------------------------------------------------------
-# Hidden rates
-default_chloe_rate = 137.75       # $ per Chloe hour (hidden)
-CONTRACTOR_FIRST_FEE = 300          # $ per account in month 1 (Premium)
+# Hidden rate constants
+default_chloe_rate = 137.75       # $ per Chloe hour
+CONTRACTOR_FIRST_FEE = 300          # $ per account month 1 (Premium)
 CONTRACTOR_ONGOING_FEE = 200        # $ per account per subsequent month (Premium)
 
 # Default list prices per billing cycle (overrideable)
@@ -22,7 +22,8 @@ st.title("📊 Sales Margin & TCV Calculator")
 # --- SIDEBAR: SETTINGS ------------------------------------------------------
 st.sidebar.header("Calculator Settings")
 
-# 1. Plan & Billing\plan = st.sidebar.selectbox("Select Plan", ["Plus", "Premium"])
+# 1. Plan & Billing
+plan = st.sidebar.selectbox("Select Plan", ["Plus", "Premium"])
 billing = st.sidebar.selectbox("Billing Cycle", ["Monthly", "6-Month", "Yearly"])
 
 # 2. Pricing override
@@ -68,17 +69,18 @@ if plan == "Premium":
 min_margin = st.sidebar.slider("Minimum Margin %", 0, 100, 40)
 
 # --- CALCULATIONS -----------------------------------------------------------
-# Billing cycles in period
+# Determine billing cycles in the analysis period
 cycle_len = cycle_months[billing]
 cycles = duration_months / cycle_len
 
-# Total Contract Value & Revenue
+# Compute TCV and revenue
 tcv = list_price * accounts * cycles
 revenue = net_price * accounts * cycles
 
+# Discount amount for display
+discount_amount = list_price - net_price
+
 # Chloe cost: dynamic hours
-# First month: hours_first * chloe_rate * accounts
-# Ongoing: hours_ongoing * chloe_rate * accounts * (duration_months-1)
 chloe_cost = (
     default_chloe_rate * chloe_hours_first * accounts
     + default_chloe_rate * chloe_hours_ongoing * accounts * max(duration_months - 1, 0)
@@ -94,8 +96,7 @@ if plan == "Premium":
     )
 
 # Total cost and margin
-total_cost = chloe_cost + contractor_cost
-total_cost = round(total_cost, 2)
+total_cost = round(chloe_cost + contractor_cost, 2)
 margin_pct = ((revenue - total_cost) / revenue * 100) if revenue else 0
 
 # Formatting helpers
@@ -104,16 +105,18 @@ def format_percent(v): return f"{v:.2f}%"
 
 # --- MAIN OUTPUT ------------------------------------------------------------
 st.subheader("Key Metrics")
-cols = st.columns(5)
+# Show list price, discount, net price, revenue, total cost, margin
+cols = st.columns(6)
 cols[0].metric("List Price/Cycle", format_currency(list_price))
-cols[1].metric("Net Price/Cycle", format_currency(net_price))
-cols[2].metric("Total Revenue", format_currency(revenue))
-cols[3].metric("Total Cost", format_currency(total_cost))
-cols[4].metric("Margin %", format_percent(margin_pct), delta=format_percent(margin_pct - min_margin))
+cols[1].metric("Discount", format_currency(discount_amount))
+cols[2].metric("Net Price/Cycle", format_currency(net_price))
+cols[3].metric("Total Revenue", format_currency(revenue))
+cols[4].metric("Total Cost (Chloe+Contractor)", format_currency(total_cost))
+cols[5].metric("Margin %", format_percent(margin_pct), delta=format_percent(margin_pct - min_margin))
 
 st.subheader("Margin Threshold")
-progress = margin_pct / min_margin if min_margin else 0
-st.progress(min(max(progress, 0.0), 1.0))
+prog = margin_pct / min_margin if min_margin else 0
+st.progress(min(max(prog, 0.0), 1.0))
 if margin_pct < min_margin:
     st.error(f"❌ Margin below {min_margin}%! Adjust discount or inputs.")
 else:
@@ -128,8 +131,7 @@ if contractor_cost:
     costs["Contractor Fees"] = format_currency(contractor_cost)
 costs["Total Cost"] = format_currency(total_cost)
 cost_df = (
-    pd.DataFrame.from_dict(costs, orient="index", columns=["Cost"]
-    )
+    pd.DataFrame.from_dict(costs, orient="index", columns=["Cost"]  )
     .rename_axis("Item")
     .reset_index()
 )
