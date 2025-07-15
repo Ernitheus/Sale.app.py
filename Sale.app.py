@@ -22,8 +22,11 @@ st.title("📊 Sales Margin & TCV Calculator")
 # --- SIDEBAR: SETTINGS ------------------------------------------------------
 st.sidebar.header("Calculator Settings")
 
-# 1. Plan & Billing\plan = st.sidebar.selectbox("Select Plan", ["Plus", "Premium"])
+# 1. Plan & Billing
+plan = st.sidebar.selectbox("Select Plan", ["Plus", "Premium"])
 billing = st.sidebar.selectbox("Billing Cycle", ["Monthly", "6-Month", "Yearly"])
+
+# 2. Pricing override("Billing Cycle", ["Monthly", "6-Month", "Yearly"])
 
 # 2. Pricing override
 def_lp = default_prices[plan][billing]
