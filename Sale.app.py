@@ -105,18 +105,19 @@ def format_percent(v): return f"{v:.2f}%"
 
 # --- MAIN OUTPUT ------------------------------------------------------------
 st.subheader("Key Metrics")
-# Show list price, discount, net price, revenue, total cost, margin
-cols = st.columns(6)
+# Show list price, discount, net price, revenue, contractor cost, total cost, margin
+cols = st.columns(7)
 cols[0].metric("List Price/Cycle", format_currency(list_price))
 cols[1].metric("Discount", format_currency(discount_amount))
 cols[2].metric("Net Price/Cycle", format_currency(net_price))
 cols[3].metric("Total Revenue", format_currency(revenue))
-cols[4].metric("Total Cost (Chloe+Contractor)", format_currency(total_cost))
-cols[5].metric("Margin %", format_percent(margin_pct), delta=format_percent(margin_pct - min_margin))
+cols[4].metric("Contractor Cost", format_currency(contractor_cost))
+cols[5].metric("Total Cost", format_currency(total_cost))
+cols[6].metric("Margin %", format_percent(margin_pct), delta=format_percent(margin_pct - min_margin))
 
 st.subheader("Margin Threshold")
-prog = margin_pct / min_margin if min_margin else 0
-st.progress(min(max(prog, 0.0), 1.0))
+progress = margin_pct / min_margin if min_margin else 0
+st.progress(min(max(progress, 0.0), 1.0))
 if margin_pct < min_margin:
     st.error(f"❌ Margin below {min_margin}%! Adjust discount or inputs.")
 else:
