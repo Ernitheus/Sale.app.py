@@ -63,7 +63,8 @@ revenue = net_price_cycle * accounts * cycles
 # Cost: Chloe support across the period
 chloe_cost = CHLOE_RATE * hours_per_account * accounts * duration_months
 
-# Cost: Contractor for Premium plan\contractor_cost = 0
+# Cost: Contractor for Premium plan
+contractor_cost = 0
 if plan == "Premium":
     ongoing_accounts = accounts - new_accounts
     contractor_cost = (
@@ -71,6 +72,7 @@ if plan == "Premium":
         CONTRACTOR_ONGOING_MONTH * ongoing_accounts * max(duration_months - 1, 0)
     )
 
+# Total cost = Chloe + Contractor
 total_cost = chloe_cost + contractor_cost
 
 # Margin calculation
@@ -102,7 +104,8 @@ else:
 st.subheader("Total Contract Value (TCV)")
 st.write(f"**Pre‑discount TCV:** ${tcv:,.2f}")
 
-# Cost breakdown\st.subheader("Cost Breakdown")
+# Cost breakdown
+st.subheader("Cost Breakdown")
 breakdown = {"Chloe Support": f"${chloe_cost:,.2f}"}
 if contractor_cost:
     breakdown["Contractor"] = f"${contractor_cost:,.2f}"
@@ -110,8 +113,7 @@ breakdown["Total"] = f"${total_cost:,.2f}"
 
 # Build and display table
 breakdown_df = (
-    pd.DataFrame.from_dict(breakdown, orient="index", columns=["Cost"]
-    )
+    pd.DataFrame.from_dict(breakdown, orient="index", columns=["Cost"])
     .rename_axis("Item")
     .reset_index()
 )
