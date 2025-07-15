@@ -1,95 +1,117 @@
+```python
 import streamlit as st
 
-# Page setup
-st.set_page_config(page_title="Margin Calculator", layout="wide")
+# --- CONFIGURATION ----------------------------------------------------------
+CHLOE_RATE = 137.75  # fixed hourly cost for Chloe
+CONTRACTOR_FIRST_MONTH = 300
+CONTRACTOR_ONGOING_MONTH = 200
 
-# Helper function
-def calculate_margin(list_price, cost):
-    if list_price == 0:
-        return 0
-    return (list_price - cost) / list_price * 100
-
-# Sidebar: Inputs
-st.sidebar.header("Settings")
-plan = st.sidebar.selectbox(
-    "Select Plan", 
-    ["Plus (Accelerator + Launchpad)", "Premium (Launchpad Premium)"]
-)
-billing = st.sidebar.selectbox(
-    "Billing Option", 
-    ["Monthly", "6-Month Prepaid", "Yearly Prepaid"]
-)
-discount_type = st.sidebar.radio(
-    "Discount Type", ["Percentage", "Absolute Amount"]
-)
-if discount_type == "Percentage":
-    discount_pct = st.sidebar.slider("Discount %", 0, 100, 0)
-    discount_val = discount_pct / 100
-else:
-    discount_val = st.sidebar.number_input("Discount ($)", min_value=0.0, value=0.0)
-
-min_margin = st.sidebar.slider(
-    "Minimum Margin %", 0, 100, 40
-)
-
-# Pricing definitions
-prices = {
-    "Plus (Accelerator + Launchpad)": {"Monthly": 500, "6-Month Prepaid": 500 * 6 * 0.9, "Yearly Prepaid": 6000},
-    "Premium (Launchpad Premium)": {"Monthly": 1416, "6-Month Prepaid": 1416 * 6 * 0.95, "Yearly Prepaid": 17000}
+PRICES = {
+    "Plus": {"Monthly": 500, "6-Month": 500 * 6 * 0.9, "Yearly": 6000},
+    "Premium": {"Monthly": 1416, "6-Month": 1416 * 6 * 0.95, "Yearly": 17000},
 }
-list_price = prices[plan][billing]
+PERIOD_LENGTH = {"Monthly": 1, "6-Month": 6, "Yearly": 12}
 
-# Apply discount
-if discount_type == "Percentage":
-    net_price = list_price * (1 - discount_val)
+# --- PAGE SETUP -------------------------------------------------------------
+st.set_page_config(page_title="Margin Calculator", layout="wide")
+st.title("📊 Sales Margin & TCV Calculator")
+
+# --- SIDEBAR INPUTS ---------------------------------------------------------
+st.sidebar.header("Calculator Settings")
+plan = st.sidebar.selectbox("Select Plan", ["Plus", "Premium"])
+billing = st.sidebar.selectbox("Billing Option", ["Monthly", "6-Month", "Yearly"])
+
+# discount
+discount_type = st.sidebar.radio("Discount Type", ["% Off", "$ Off"])
+if discount_type == "% Off":
+    discount_pct = st.sidebar.slider("Discount %", 0, 100, 0) / 100
+    discount_val = discount_pct
 else:
-    net_price = max(0, list_price - discount_val)
+    discount_val_amount = st.sidebar.number_input("Discount Amount ($)", min_value=0.0, value=0.0)
+    discount_val = discount_val_amount
 
-# Cost calculations
-if plan == "Plus (Accelerator + Launchpad)":
-    st.sidebar.markdown("---")
-    chloe_rate = st.sidebar.number_input("Chloe's Hourly Rate ($)", value=137.75)
-    hours_per_account = st.sidebar.number_input("Hours per Account / Month", value=1.0)
-    cost = chloe_rate * hours_per_account
+min_margin = st.sidebar.slider("Minimum Margin %", 0, 100, 40)
+accounts = st.sidebar.number_input("Number of Accounts", min_value=1, value=1)
+hours_per_account = st.sidebar.number_input("Hours per Account / Month", min_value=0.0, value=1.0)
+period = st.sidebar.selectbox("Analysis Period", [1, 6, 12, 24], format_func=lambda m: f"{m} {'month' if m<12 else 'years' if m==24 else 'months'}")
+new_accounts = 0
+if plan == "Premium":
+    new_accounts = st.sidebar.number_input("New Accounts in Month 1", min_value=0, max_value=accounts, value=accounts)
+
+# --- CORE CALCULATIONS ------------------------------------------------------
+# list price per billing cycle
+list_price_base = PRICES[plan][billing]
+# net price per cycle after discount
+if discount_type == "% Off":
+    net_price_cycle = list_price_base * (1 - discount_val)
 else:
-    st.sidebar.markdown("---")
-    month_sel = st.sidebar.selectbox("Month of Service", ["1st Month", "Ongoing"])
-    first_month_cost = 300
-    ongoing_cost = 200
-    cost = first_month_cost if month_sel == "1st Month" else ongoing_cost
+    net_price_cycle = max(list_price_base - discount_val, 0)
 
-# Calculate margin
-margin_pct = calculate_margin(net_price, cost)
+# how many billing cycles fit in analysis period
+cycles = period / PERIOD_LENGTH[billing]
+# total contract value (pre-discount)
+tcv = list_price_base * accounts * cycles
+# total revenue after discount
+revenue = net_price_cycle * accounts * cycles
 
-# Main: Display
-st.title("📊 Margin Calculator")
+# cost: Chloe support
+chloe_cost = CHLOE_RATE * hours_per_account * accounts * period
+# cost: contractor (Premium only)
+contractor_cost = 0
+if plan == "Premium":
+    ongoing_accounts = accounts - new_accounts
+    contractor_cost = (
+        CONTRACTOR_FIRST_MONTH * new_accounts +
+        CONTRACTOR_ONGOING_MONTH * ongoing_accounts * max(period - 1, 0)
+    )
+# total cost
+total_cost = chloe_cost + contractor_cost
 
-# Show key metrics
-col1, col2, col3, col4 = st.columns([2, 2, 2, 3])
-col1.metric("List Price", f"${list_price:,.2f}")
-col2.metric("Net Price", f"${net_price:,.2f}")
-col3.metric("Cost", f"${cost:,.2f}")
-col4.metric(
-    "Margin %", 
-    f"{margin_pct:.2f}%", 
-    delta_color="inverse",
-    delta=(margin_pct - min_margin),
+# margin percentage
+def safe_margin(rev, cost):
+    return ((rev - cost) / rev * 100) if rev else 0
+margin_pct = safe_margin(revenue, total_cost)
+
+# --- OUTPUT METRICS ---------------------------------------------------------
+st.subheader("Key Metrics")
+col1, col2, col3, col4, col5 = st.columns(5)
+col1.metric("List Price/Cycle", f"${list_price_base:,.2f}")
+col2.metric("Net Price/Cycle", f"${net_price_cycle:,.2f}")
+col3.metric("Total Revenue", f"${revenue:,.2f}")
+col4.metric("Total Cost", f"${total_cost:,.2f}")
+col5.metric(
+    "Margin %", f"{margin_pct:.2f}%",
+    delta=f"{margin_pct - min_margin:.2f}%"
 )
 
-st.markdown("---")
-
-# Margin meter
-st.subheader("Margin Threshold Meter")
+# margin threshold meter
+st.subheader("Margin Threshold")
 progress = margin_pct / min_margin if min_margin else 0
 st.progress(min(max(progress, 0.0), 1.0))
-
 if margin_pct < min_margin:
-    st.error(f"❌ Margin below {min_margin}%! Adjust discount or cost.")
+    st.error(f"❌ Margin below {min_margin}%! Adjust discount or inputs.")
 else:
     st.success(f"✅ Margin meets or exceeds {min_margin}%.")
 
-# Optional chart area
-# Users can extend this with Altair or Plotly for richer visuals
+# contract value section
+st.subheader("Total Contract Value (TCV)")
+st.write(f"**Pre‑discount TCV:** ${tcv:,.2f}")
 
-st.markdown("---")
-st.caption("Built with ❤️ on Streamlit. Integrate this script into your GitHub repo and deploy to Streamlit Cloud.")
+# breakdown table
+st.subheader("Cost Breakdown")
+breakdown = {
+    "Chloe Support": f"${chloe_cost:,.2f}",
+}
+if contractor_cost:
+    breakdown["Contractor"] = f"${contractor_cost:,.2f}"
+breakdown["__Total__"] = f"${total_cost:,.2f}"  # will bold in dataframe
+
+df = (
+    st.dataframe(
+        pd.DataFrame.from_dict(breakdown, orient="index", columns=["Cost"]),
+        width=400
+    )
+)
+
+st.caption("Built with ❤️ for your Sales & Finance teams.")
+```
