@@ -46,10 +46,9 @@ contractor_first_fee = st.sidebar.number_input("Contractor First Month Fee ($)",
 contractor_ongoing_fee = st.sidebar.number_input("Contractor Monthly Ongoing Fee ($)", min_value=0.0, value=200.0, step=50.0)
 
 # Premium-only new accounts and contractor cost
-new_accounts = 0
+new_accounts = accounts
 if plan == "Premium":
     new_accounts = st.sidebar.number_input("New Accounts in Month 1", min_value=0, max_value=int(accounts), value=int(accounts))
-
 ongoing_accounts = accounts - new_accounts
 contractor_cost = (
     contractor_first_fee * new_accounts
@@ -68,7 +67,9 @@ chloe_cost = CHLOE_RATE * chloe_first * accounts
 if duration > 1:
     chloe_cost += CHLOE_RATE * chloe_ongoing * accounts * (duration - 1)
 
-total_cost = round(chloe_cost + contractor_cost, 2)
+# Ensure contractor cost is added for all plans
+total_contractor_cost = contractor_first_fee * new_accounts + contractor_ongoing_fee * accounts * max(duration - 1, 0)
+total_cost = round(chloe_cost + total_contractor_cost, 2)
 margin_pct = ((revenue - total_cost) / revenue * 100) if revenue else 0
 
 # Formatting
@@ -98,7 +99,7 @@ st.write(f"**Pre‑discount TCV:** {fmt_cur(tcv)}")
 st.subheader("Cost Breakdown")
 costs = {
     "Chloe Support": fmt_cur(chloe_cost),
-    "Contractor Fees": fmt_cur(contractor_cost),
+    "Contractor Fees": fmt_cur(total_contractor_cost),
     "Total Cost": fmt_cur(total_cost)
 }
-cost_df = pd.DataFrame.from_dict(costs, orient="ind
+cost_df = pd.DataFrame.f
