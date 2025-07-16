@@ -71,6 +71,8 @@ revenue = net_price * accounts * cycles
 chloe_cost = CHLOE_RATE * chloe_first * accounts
 if duration > 1:
     chloe_cost += CHLOE_RATE * chloe_ongoing * accounts * (duration - 1)
+if plan == "Premium":
+    contractor_cost = contractor_first_fee * new_accounts + contractor_ongoing_fee * accounts * max(duration - 1, 0)
 total_cost = round(chloe_cost + contractor_cost, 2)
 margin_pct = ((revenue - total_cost) / revenue * 100) if revenue else 0
 
@@ -100,12 +102,12 @@ st.subheader("Total Contract Value (TCV)")
 st.write(f"**Pre‑discount TCV:** {fmt_cur(tcv)}")
 
 st.subheader("Cost Breakdown")
-costs = {"Chloe Support": fmt_cur(chloe_cost)}
-if contractor_cost:
-    costs["Contractor Fees"] = fmt_cur(contractor_cost)
-costs["Total Cost"] = fmt_cur(total_cost)
+costs = {
+    "Chloe Support": fmt_cur(chloe_cost),
+    "Contractor Fees": fmt_cur(contractor_cost),
+    "Total Cost": fmt_cur(total_cost)
+}
 cost_df = pd.DataFrame.from_dict(costs, orient="index", columns=["Cost"]).rename_axis("Item").reset_index()
 st.table(cost_df)
 
 st.caption("Built with ❤️ for your Sales & Finance teams.")
-
