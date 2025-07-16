@@ -62,6 +62,12 @@ if plan == "Premium":
     new_accounts = st.sidebar.number_input(
         "New Accounts in Month 1", min_value=0, max_value=accounts, value=accounts
     )
+    # Show contractor cost estimate next to the input
+    est_contractor = (
+        CONTRACTOR_FIRST_FEE * new_accounts +
+        CONTRACTOR_ONGOING_FEE * (accounts - new_accounts) * max(duration_months - 1, 0)
+    )
+    st.sidebar.metric("Contractor Cost (est.)", f"${est_contractor:,.2f}")
 
 # 7. Minimum Margin Guard
 min_margin = st.sidebar.slider("Minimum Margin %", 0, 100, 40)
