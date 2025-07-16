@@ -19,8 +19,7 @@ st.title("📊 Sales Margin & TCV Calculator")
 # --- SIDEBAR: SETTINGS ------------------------------------------------------
 st.sidebar.header("Calculator Settings")
 
-# 1. Plan & Billing
-plan = st.sidebar.selectbox("Select Plan", ["Plus", "Premium"])
+# 1. Plan & Billing\plan = st.sidebar.selectbox("Select Plan", ["Plus", "Premium"])
 billing = st.sidebar.selectbox("Billing Cycle", ["Monthly", "6-Month", "Yearly"])
 
 # 2. Pricing Override
@@ -56,88 +55,78 @@ chloe_hours_ongoing = st.sidebar.number_input(
     "Ongoing Monthly Hours", min_value=0.0, value=1.0, step=0.25
 )
 
-# 6. Premium-only: New vs. Ongoing Accounts
+# 6. Premium-only: New vs. Ongoing Accounts & Contractor Cost
 new_accounts = 0
+contractor_estimate = 0
 if plan == "Premium":
     new_accounts = st.sidebar.number_input(
         "New Accounts in Month 1", min_value=0, max_value=accounts, value=accounts
     )
-    # Show contractor cost estimate next to the input
-    est_contractor = (
-        CONTRACTOR_FIRST_FEE * new_accounts +
-        CONTRACTOR_ONGOING_FEE * (accounts - new_accounts) * max(duration_months - 1, 0)
+    ongoing_accounts = accounts - new_accounts
+    # Estimate contractor flat fees
+    contractor_estimate = (
+        CONTRACTOR_FIRST_FEE * new_accounts
+        + CONTRACTOR_ONGOING_FEE * ongoing_accounts * max(duration_months - 1, 0)
     )
-    st.sidebar.metric("Contractor Cost (est.)", f"${est_contractor:,.2f}")
+    st.sidebar.metric("Contractor Cost (est.)", f"${contractor_estimate:,.2f}")
 
 # 7. Minimum Margin Guard
 min_margin = st.sidebar.slider("Minimum Margin %", 0, 100, 40)
 
-# --- CALCULATIONS -----------------------------------------------------------
-# Billing cycles in the analysis period
-cycle_len = CYCLE_MONTHS[billing]
-cycles = duration_months / cycle_len
+# --- CORE CALCULATIONS ------------------------------------------------------
+# Billing cycles count
+cycles = duration_months / CYCLE_MONTHS[billing]
 
 # TCV & Revenue
 tcv = list_price * accounts * cycles
 revenue = net_price * accounts * cycles
 
-# Discount amount for display
-discount_amount = list_price - net_price
-
-# Chloe Cost
+# Chloe cost total
 total_chloe_cost = (
-    CHLOE_RATE * chloe_hours_first * accounts +
-    CHLOE_RATE * chloe_hours_ongoing * accounts * max(duration_months - 1, 0)
+    CHLOE_RATE * chloe_hours_first * accounts
+    + CHLOE_RATE * chloe_hours_ongoing * accounts * max(duration_months - 1, 0)
 )
 
-# Contractor Cost (Premium)
-contractor_cost = 0
-if plan == "Premium":
-    ongoing_accounts = accounts - new_accounts
-    contractor_cost = (
-        CONTRACTOR_FIRST_FEE * new_accounts +
-        CONTRACTOR_ONGOING_FEE * ongoing_accounts * max(duration_months - 1, 0)
-    )
+# Contractor cost actual
+contractor_cost = contractor_estimate if plan == "Premium" else 0
 
-# Total Cost & Margin
+# Total cost & margin
 total_cost = round(total_chloe_cost + contractor_cost, 2)
 margin_pct = ((revenue - total_cost) / revenue * 100) if revenue else 0
 
-# --- SIDEBAR DISPLAY: CONTRACTOR COST ---------------------------------------
-# Show contractor cost estimate in sidebar for validation
-st.sidebar.markdown("---")
-st.sidebar.metric("Estimated Contractor Cost", f"${contractor_cost:,.2f}")
-
 # --- MAIN OUTPUT ------------------------------------------------------------
+def fmt_cur(v): return f"${v:,.2f}"
+def fmt_pct(v): return f"{v:.2f}%"
+
 st.subheader("Key Metrics")
 cols = st.columns(8)
-cols[0].metric("List Price/Cycle", f"${list_price:,.2f}")
-cols[1].metric("Discount", f"${discount_amount:,.2f}")
-cols[2].metric("Net Price/Cycle", f"${net_price:,.2f}")
-cols[3].metric("Total Revenue", f"${revenue:,.2f}")
-cols[4].metric("Chloe Cost", f"${total_chloe_cost:,.2f}")
-cols[5].metric("Contractor Cost", f"${contractor_cost:,.2f}")
-cols[6].metric("Total Cost", f"${total_cost:,.2f}")
-cols[7].metric("Margin %", f"{margin_pct:.2f}%", delta=f"{margin_pct - min_margin:.2f}%")
+cols[0].metric("List Price/Cycle", fmt_cur(list_price))
+cols[1].metric("Discount", fmt_cur(discount_amount))
+cols[2].metric("Net Price/Cycle", fmt_cur(net_price))
+cols[3].metric("Total Revenue", fmt_cur(revenue))
+cols[4].metric("Chloe Cost", fmt_cur(total_chloe_cost))
+cols[5].metric("Contractor Cost", fmt_cur(contractor_cost))
+cols[6].metric("Total Cost", fmt_cur(total_cost))
+cols[7].metric("Margin %", fmt_pct(margin_pct), delta=fmt_pct(margin_pct - min_margin))
 
 st.subheader("Margin Threshold")
-progress = margin_pct / min_margin if min_margin else 0
-st.progress(min(max(progress, 0.0), 1.0))
+prog = margin_pct / min_margin if min_margin else 0
+st.progress(min(max(prog, 0), 1))
 if margin_pct < min_margin:
     st.error(f"❌ Margin below {min_margin}%! Adjust inputs.")
 else:
     st.success(f"✅ Margin at or above {min_margin}%.")
 
 st.subheader("Total Contract Value (TCV)")
-st.write(f"**Pre‑discount TCV:** ${tcv:,.2f}")
+st.write(f"**Pre‑discount TCV:** {fmt_cur(tcv)}")
 
 st.subheader("Cost Breakdown")
-costs = {"Chloe Support": f"${total_chloe_cost:,.2f}"}
+cost_items = {"Chloe Support": fmt_cur(total_chloe_cost)}
 if contractor_cost:
-    costs["Contractor Fees"] = f"${contractor_cost:,.2f}"
-costs["Total Cost"] = f"${total_cost:,.2f}"
+    cost_items["Contractor Fees"] = fmt_cur(contractor_cost)
+cost_items["Total Cost"] = fmt_cur(total_cost)
 cost_df = (
-    pd.DataFrame.from_dict(costs, orient="index", columns=["Cost"])  
+    pd.DataFrame.from_dict(cost_items, orient="index", columns=["Cost"])  
     .rename_axis("Item")  
     .reset_index()
 )
