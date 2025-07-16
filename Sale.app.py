@@ -45,12 +45,8 @@ chloe_ongoing = st.sidebar.number_input("Ongoing Monthly Hours", min_value=0.0, 
 # Contractor Fees per Account
 st.sidebar.markdown("---")
 st.sidebar.subheader("Contractor Fees per Account")
-contractor_first_fee = st.sidebar.number_input(
-    "Contractor First Month Fee ($)", min_value=0.0, value=float(CONTRACTOR_FIRST_FEE), step=50.0
-)
-contractor_ongoing_fee = st.sidebar.number_input(
-    "Contractor Monthly Ongoing Fee ($)", min_value=0.0, value=float(CONTRACTOR_ONGOING_FEE), step=50.0
-)
+contractor_first_fee = st.sidebar.number_input("Contractor First Month Fee ($)", min_value=0.0, value=float(CONTRACTOR_FIRST_FEE), step=50.0)
+contractor_ongoing_fee = st.sidebar.number_input("Contractor Monthly Ongoing Fee ($)", min_value=0.0, value=float(CONTRACTOR_ONGOING_FEE), step=50.0)
 
 # Premium-only new accounts and contractor cost
 new_accounts = 0
@@ -58,21 +54,13 @@ contractor_cost = 0
 if plan == "Premium":
     new_accounts = st.sidebar.number_input("New Accounts in Month 1", min_value=0, max_value=accounts, value=accounts)
     ongoing_accounts = accounts - new_accounts
-    # Calculate contractor cost using manual fees
     contractor_cost = (
         contractor_first_fee * new_accounts
-        + contractor_ongoing_fee * ongoing_accounts * max(duration - 1, 0)
+        + contractor_ongoing_fee * accounts * max(duration - 1, 0)
     )
     # Display computed contractor cost in sidebar
     st.sidebar.metric("Total Contractor Cost", f"${contractor_cost:,.2f}")
-# Margin Guard
-new_accounts = 0
-contractor_est = 0
-if plan == "Premium":
-    new_accounts = st.sidebar.number_input("New Accounts in Month 1", min_value=0, max_value=accounts, value=accounts)
-    ongoing_accounts = accounts - new_accounts
-    contractor_est = CONTRACTOR_FIRST_FEE * new_accounts + CONTRACTOR_ONGOING_FEE * ongoing_accounts * max(duration - 1, 0)
-    st.sidebar.metric("Contractor Cost (est.)", f"${contractor_est:,.2f}")
+
 # Margin Guard
 min_margin = st.sidebar.slider("Minimum Margin %", 0, 100, 40)
 
@@ -80,8 +68,9 @@ min_margin = st.sidebar.slider("Minimum Margin %", 0, 100, 40)
 cycles = duration / CYCLE_MONTHS[billing]
 tcv = list_price * accounts * cycles
 revenue = net_price * accounts * cycles
-chloe_cost = CHLOE_RATE * chloe_first * accounts + CHLOE_RATE * chloe_ongoing * accounts * max(duration - 1, 0)
-contractor_cost = contractor_est if plan == "Premium" else 0
+chloe_cost = CHLOE_RATE * chloe_first * accounts
+if duration > 1:
+    chloe_cost += CHLOE_RATE * chloe_ongoing * accounts * (duration - 1)
 total_cost = round(chloe_cost + contractor_cost, 2)
 margin_pct = ((revenue - total_cost) / revenue * 100) if revenue else 0
 
