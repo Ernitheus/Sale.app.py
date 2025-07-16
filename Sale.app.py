@@ -108,3 +108,4 @@ cost_df = pd.DataFrame.from_dict(costs, orient="index", columns=["Cost"]).rename
 st.table(cost_df)
 
 st.caption("Built with ❤️ for your Sales & Finance teams.")
+
