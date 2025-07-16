@@ -52,7 +52,7 @@ contractor_ongoing_fee = st.sidebar.number_input("Contractor Monthly Ongoing Fee
 new_accounts = 0
 contractor_cost = 0
 if plan == "Premium":
-    new_accounts = st.sidebar.number_input("New Accounts in Month 1", min_value=0, max_value=accounts, value=accounts)
+    new_accounts = st.sidebar.number_input("New Accounts in Month 1", min_value=0, max_value=int(accounts), value=int(accounts))
     ongoing_accounts = accounts - new_accounts
     contractor_cost = (
         contractor_first_fee * new_accounts
