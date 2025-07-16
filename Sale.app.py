@@ -47,15 +47,15 @@ contractor_ongoing_fee = st.sidebar.number_input("Contractor Monthly Ongoing Fee
 
 # Premium-only new accounts and contractor cost
 new_accounts = 0
-contractor_cost = 0
 if plan == "Premium":
     new_accounts = st.sidebar.number_input("New Accounts in Month 1", min_value=0, max_value=int(accounts), value=int(accounts))
-    ongoing_accounts = accounts - new_accounts
-    contractor_cost = (
-        contractor_first_fee * new_accounts
-        + contractor_ongoing_fee * accounts * max(duration - 1, 0)
-    )
-    st.sidebar.metric("Total Contractor Cost", f"${contractor_cost:,.2f}")
+
+ongoing_accounts = accounts - new_accounts
+contractor_cost = (
+    contractor_first_fee * new_accounts
+    + contractor_ongoing_fee * accounts * max(duration - 1, 0)
+)
+st.sidebar.metric("Total Contractor Cost", f"${contractor_cost:,.2f}")
 
 # Margin Guard
 min_margin = st.sidebar.slider("Minimum Margin %", 0, 100, 40)
@@ -67,12 +67,6 @@ revenue = net_price * accounts * cycles
 chloe_cost = CHLOE_RATE * chloe_first * accounts
 if duration > 1:
     chloe_cost += CHLOE_RATE * chloe_ongoing * accounts * (duration - 1)
-
-# Always calculate contractor cost regardless of visibility
-if plan == "Premium":
-    contractor_cost = contractor_first_fee * new_accounts + contractor_ongoing_fee * accounts * max(duration - 1, 0)
-else:
-    contractor_cost = 0
 
 total_cost = round(chloe_cost + contractor_cost, 2)
 margin_pct = ((revenue - total_cost) / revenue * 100) if revenue else 0
@@ -107,7 +101,4 @@ costs = {
     "Contractor Fees": fmt_cur(contractor_cost),
     "Total Cost": fmt_cur(total_cost)
 }
-cost_df = pd.DataFrame.from_dict(costs, orient="index", columns=["Cost"]).rename_axis("Item").reset_index()
-st.table(cost_df)
-
-st.caption("Built with ❤️ for your Sales & Finance teams.")
+cost_df = pd.DataFrame.from_dict(costs, orient="ind
