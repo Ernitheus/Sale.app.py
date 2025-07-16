@@ -41,7 +41,31 @@ st.sidebar.markdown("---")
 st.sidebar.subheader("Chloe Time per Account")
 chloe_first = st.sidebar.number_input("First Month Hours", min_value=0.0, value=2.0, step=0.25)
 chloe_ongoing = st.sidebar.number_input("Ongoing Monthly Hours", min_value=0.0, value=1.0, step=0.25)
-# Premium-only new accounts
+
+# Contractor Fees per Account
+st.sidebar.markdown("---")
+st.sidebar.subheader("Contractor Fees per Account")
+contractor_first_fee = st.sidebar.number_input(
+    "Contractor First Month Fee ($)", min_value=0.0, value=float(CONTRACTOR_FIRST_FEE), step=50.0
+)
+contractor_ongoing_fee = st.sidebar.number_input(
+    "Contractor Monthly Ongoing Fee ($)", min_value=0.0, value=float(CONTRACTOR_ONGOING_FEE), step=50.0
+)
+
+# Premium-only new accounts and contractor cost
+new_accounts = 0
+contractor_cost = 0
+if plan == "Premium":
+    new_accounts = st.sidebar.number_input("New Accounts in Month 1", min_value=0, max_value=accounts, value=accounts)
+    ongoing_accounts = accounts - new_accounts
+    # Calculate contractor cost using manual fees
+    contractor_cost = (
+        contractor_first_fee * new_accounts
+        + contractor_ongoing_fee * ongoing_accounts * max(duration - 1, 0)
+    )
+    # Display computed contractor cost in sidebar
+    st.sidebar.metric("Total Contractor Cost", f"${contractor_cost:,.2f}")
+# Margin Guard
 new_accounts = 0
 contractor_est = 0
 if plan == "Premium":
