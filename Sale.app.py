@@ -3,9 +3,6 @@ import pandas as pd
 
 # --- CONFIGURATION ----------------------------------------------------------
 CHLOE_RATE = 137.75             # hidden hourly cost for Chloe
-CONTRACTOR_FIRST_FEE = 300       # $ per account month 1 (Premium)
-CONTRACTOR_ONGOING_FEE = 200     # $ per account per subsequent month (Premium)
-
 DEFAULT_PRICES = {
     "Plus": {"Monthly": 500, "6-Month": 3900, "Yearly": 5100},
     "Premium": {"Monthly": 1416, "6-Month": 6000, "Yearly": 11900},
@@ -45,8 +42,8 @@ chloe_ongoing = st.sidebar.number_input("Ongoing Monthly Hours", min_value=0.0, 
 # Contractor Fees per Account
 st.sidebar.markdown("---")
 st.sidebar.subheader("Contractor Fees per Account")
-contractor_first_fee = st.sidebar.number_input("Contractor First Month Fee ($)", min_value=0.0, value=float(CONTRACTOR_FIRST_FEE), step=50.0)
-contractor_ongoing_fee = st.sidebar.number_input("Contractor Monthly Ongoing Fee ($)", min_value=0.0, value=float(CONTRACTOR_ONGOING_FEE), step=50.0)
+contractor_first_fee = st.sidebar.number_input("Contractor First Month Fee ($)", min_value=0.0, value=300.0, step=50.0)
+contractor_ongoing_fee = st.sidebar.number_input("Contractor Monthly Ongoing Fee ($)", min_value=0.0, value=200.0, step=50.0)
 
 # Premium-only new accounts and contractor cost
 new_accounts = 0
@@ -58,7 +55,6 @@ if plan == "Premium":
         contractor_first_fee * new_accounts
         + contractor_ongoing_fee * accounts * max(duration - 1, 0)
     )
-    # Display computed contractor cost in sidebar
     st.sidebar.metric("Total Contractor Cost", f"${contractor_cost:,.2f}")
 
 # Margin Guard
@@ -71,8 +67,13 @@ revenue = net_price * accounts * cycles
 chloe_cost = CHLOE_RATE * chloe_first * accounts
 if duration > 1:
     chloe_cost += CHLOE_RATE * chloe_ongoing * accounts * (duration - 1)
+
+# Always calculate contractor cost regardless of visibility
 if plan == "Premium":
     contractor_cost = contractor_first_fee * new_accounts + contractor_ongoing_fee * accounts * max(duration - 1, 0)
+else:
+    contractor_cost = 0
+
 total_cost = round(chloe_cost + contractor_cost, 2)
 margin_pct = ((revenue - total_cost) / revenue * 100) if revenue else 0
 
@@ -82,7 +83,6 @@ fmt_pct = lambda v: f"{v:.2f}%"
 
 # --- MAIN OUTPUT ------------------------------------------------------------
 st.subheader("Key Metrics")
-# Show only requested metrics
 cols = st.columns(5)
 cols[0].metric("List Price/Cycle", fmt_cur(list_price))
 cols[1].metric("Discount", fmt_cur(discount_amount))
