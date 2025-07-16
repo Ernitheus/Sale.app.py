@@ -67,8 +67,8 @@ chloe_cost = CHLOE_RATE * chloe_first * accounts
 if duration > 1:
     chloe_cost += CHLOE_RATE * chloe_ongoing * accounts * (duration - 1)
 
-# Ensure contractor cost is added for all plans
-total_contractor_cost = contractor_first_fee * new_accounts + contractor_ongoing_fee * accounts * max(duration - 1, 0)
+# Ensure contractor cost is added to margin and total cost calculations
+total_contractor_cost = contractor_cost
 total_cost = round(chloe_cost + total_contractor_cost, 2)
 margin_pct = ((revenue - total_cost) / revenue * 100) if revenue else 0
 
@@ -97,9 +97,12 @@ st.subheader("Total Contract Value (TCV)")
 st.write(f"**Pre‑discount TCV:** {fmt_cur(tcv)}")
 
 st.subheader("Cost Breakdown")
-costs = {
-    "Chloe Support": fmt_cur(chloe_cost),
-    "Contractor Fees": fmt_cur(total_contractor_cost),
-    "Total Cost": fmt_cur(total_cost)
+cost_data = {
+    "Item": ["Chloe Support", "Contractor Fees", "Total Cost"],
+    "Cost": [chloe_cost, total_contractor_cost, total_cost]
 }
-cost_df = pd.DataFrame.f
+cost_df = pd.DataFrame(cost_data)
+cost_df["Cost"] = cost_df["Cost"].map(fmt_cur)
+st.table(cost_df)
+
+st.caption("Built with ❤️ for your Sales & Finance teams.")
